@@ -22,13 +22,26 @@ if [ "$(whoami)" != 'root' ]; then
 		exit 1;
 fi
 
-echo "Updating the repository."
-add-apt-repository -y ppa:certbot/certbot
-apt-get update
-echo "Installing LAMP packages"
-apt-get --assume-yes install apache2 mysql-server php php-cli libapache2-mod-php php-mysql unzip php-mcrypt
-apt-get --assume-yes install php-zip php-xml php-imap php-opcache php-apcu php-memcached php-mbstring php-curl php-amqplib php-mbstring php-bcmath php-intl
+#Ensure it only works on ubuntu and install apps for specific versions
+if [  -n "$(uname -a | grep Ubuntu)" ]; then
+        echo `lsb_release -d | grep -oh Ubuntu.*`
 
+        echo "Updating the repository."
+        add-apt-repository -y ppa:certbot/certbot
+        apt-get update
+        echo "Installing LAMP packages"
+        apt-get --assume-yes install apache2 mysql-server php php-cli libapache2-mod-php php-mysql unzip python-certbot-apache
+        apt-get --assume-yes install php-zip php-xml php-imap php-opcache php-apcu php-memcached php-mbstring php-curl php-amqplib php-mbstring php-bcmath php-intl
+
+
+        x=`lsb_release -rs`
+        if (($(echo "$x < 18.04" | bc -l) ));then
+                echo "old version"
+                apt-get --assume-yes install php-mcrypt
+else
+        echo "This script is only compatible and tested on Ubuntu"
+        exit 1
+fi
 cd /etc/apache2/mods-enabled/
 sed -e 's/\s*DirectoryIndex.*$/\tDirectoryIndex index\.php index\.html index\.cgi index\.pl index\.xhtml index\.htm/' \
     dir.conf > /tmp/dir.conf && mv /tmp/dir.conf dir.conf
@@ -126,7 +139,7 @@ sed 's#^;*date\.timezone[[:space:]]=.*$#date.timezone = "'"$timezone"'"#' $ini >
 /etc/init.d/apache2 reload
 
 #Setup SSL for https
-certbot -d $domain -d www.$domain --non-interactive --redirect --keep-until-expiring --agree-tos --apache -m $email
+certbot -d $domain --non-interactive --redirect --keep-until-expiring --agree-tos --apache -m $email
 
 (crontab -l 2>/dev/null; echo "*/1 * * * * www-data /usr/bin/php /var/www/mautic/app/console mautic:segments:update > /dev/null 2>&1") | crontab -
 (crontab -l 2>/dev/null; echo "*/1 * * * * www-data /usr/bin/php /var/www/mautic/app/console mautic:campaigns:trigger > /dev/null 2>&1") | crontab -
