@@ -38,6 +38,7 @@ if [  -n "$(uname -a | grep Ubuntu)" ]; then
         if (($(echo "$x < 18.04" | bc -l) ));then
                 echo "old version"
                 apt-get --assume-yes install php-mcrypt
+        fi
 else
         echo "This script is only compatible and tested on Ubuntu"
         exit 1
